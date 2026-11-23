@@ -66,7 +66,14 @@ for n in ("budget.json",):
     t = os.path.join(DEST, "usage", n)
     if not os.path.exists(t):
         shutil.copy2(os.path.join(KIT, n), t)
-managed_block(os.path.join(DEST, "CLAUDE.md"), op(os.path.join(KIT, "global-CLAUDE.md")).read())
+# remember where the kit lives (for autoupdate) and switch budget to self-tuning unless the user chose otherwise
+op(os.path.join(DEST, "usage", "kit_path.txt"), "w").write(KIT)
+_bp = os.path.join(DEST, "usage", "budget.json")
+_b = json.load(op(_bp))
+if "auto" not in _b:
+    _b["auto"] = True
+    json.dump(_b, op(_bp, "w"), indent=2)
+managed_block(os.path.join(DEST, "CLAUDE.md"),op(os.path.join(KIT, "global-CLAUDE.md")).read())
 merge_settings()
 
 # Global gitignore so ripgrep-based Glob/Grep skip junk dirs in every repo (skipped if you set your own excludesfile).

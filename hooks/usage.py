@@ -72,6 +72,25 @@ def fmt(n):
     return f"{n/1e6:.1f}M"
 
 
+def effective(b):
+    """auto=true: after >=5 prior days of history, daily limit = max(5M, 2 x p90 of past daily totals); session = half."""
+    if not b.get("auto"):
+        return b
+    by = {}
+    for f in glob.glob(os.path.join(SESS, "*.json")):
+        try:
+            d = json.load(op(f))
+            if d.get("date") != today:
+                by[d["date"]] = by.get(d["date"], 0) + d.get("weighted", 0)
+        except Exception:
+            pass
+    if len(by) < 5:
+        return b
+    v = sorted(by.values())
+    daily = max(5e6, 2 * v[min(len(v) - 1, int(0.9 * len(v)))])
+    return {**b, "daily_limit": daily, "session_limit": daily / 2, "_tuned": True}
+
+
 cmd = sys.argv[1] if len(sys.argv) > 1 else ""
 try:
     data = json.load(sys.stdin) if not sys.stdin.isatty() and cmd != "report" else {}
@@ -86,7 +105,7 @@ if cmd == "record":
         json.dump({"date": today, "weighted": w, "usd": usd},
                   op(os.path.join(SESS, f"{sid}.json"), "w"))
 elif cmd == "check":
-    b = load("budget.json", {"daily_limit": 40e6, "session_limit": 20e6, "warn_pct": 80})
+    b = effective(load("budget.json", {"daily_limit": 40e6, "session_limit": 20e6, "warn_pct": 80}))
     day = day_total()
     try:
         sess = json.load(op(os.path.join(SESS, f"{sid}.json"))).get("weighted", 0)
@@ -114,3 +133,6 @@ elif cmd == "report":
     for day in sorted(by)[-7:]:
         w, usd, n = by[day]
         print(f"{day}  {fmt(w):>8} weighted  {n} sessions" + (f"  ~${usd:.2f}" if usd else ""))
+    b = effective(load("budget.json", {"daily_limit": 40e6, "session_limit": 20e6, "warn_pct": 80}))
+    print(f"limits: daily {fmt(b['daily_limit'])}, session {fmt(b['session_limit'])} "
+          f"({'auto-tuned from your history' if b.get('_tuned') else 'defaults until 5 days of history exist'})")

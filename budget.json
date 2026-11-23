@@ -1,1 +1,1 @@
-{"daily_limit": 40000000, "session_limit": 20000000, "warn_pct": 80}
+{"daily_limit": 40000000, "session_limit": 20000000, "warn_pct": 80, "auto": true}
