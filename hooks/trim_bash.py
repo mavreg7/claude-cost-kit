@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """PreToolUse(Bash) hook: wrap known-verbose runners so output is trimmed before entering context.
 Fails safe: any doubt -> do nothing."""
+import sys as _s
+for _st in (_s.stdin, _s.stdout, _s.stderr):
+    try:
+        _st.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 import json, re, sys
 
 try:

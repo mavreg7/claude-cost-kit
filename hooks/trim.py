@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 """Trim verbose command output from stdin: head + error lines + tail. Full log saved to disk."""
+import sys as _s
+for _st in (_s.stdin, _s.stdout, _s.stderr):
+    try:
+        _st.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 import os, re, sys, time, tempfile
 
 MAX_LINES = int(os.environ.get("TRIM_MAX_LINES", "80"))
@@ -15,7 +21,7 @@ if len(lines) <= MAX_LINES:
 d = os.path.join(tempfile.gettempdir(), "claude-trim")
 os.makedirs(d, exist_ok=True)
 path = os.path.join(d, f"{time.strftime('%H%M%S')}-{os.getpid()}.log")
-with open(path, "w") as f:
+with open(path, "w", encoding="utf-8") as f:
     f.write("\n".join(lines))
 
 head, tail = lines[:HEAD], lines[-TAIL:]

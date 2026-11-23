@@ -6,6 +6,12 @@
 Cost unit = 'weighted tokens' (input 1, cache-write 1.25, cache-read 0.1, output 5), summed over models.
 Optional USD: fill $/MTok in ~/.claude/usage/pricing.json (substring of model id -> {in, out}).
 """
+import sys as _s
+for _st in (_s.stdin, _s.stdout, _s.stderr):
+    try:
+        _st.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 import datetime as dt, glob, json, os, sys
 
 HOME = os.path.expanduser("~/.claude/usage")
@@ -13,10 +19,13 @@ SESS = os.path.join(HOME, "sessions")
 os.makedirs(SESS, exist_ok=True)
 today = dt.date.today().isoformat()
 
+def op(p, m="r"):
+    return open(p, m, encoding="utf-8", errors="replace" if "r" in m else "strict")
+
 
 def load(name, default):
     try:
-        return json.load(open(os.path.join(HOME, name)))
+        return json.load(op(os.path.join(HOME, name)))
     except Exception:
         return default
 
@@ -24,7 +33,7 @@ def load(name, default):
 def tally(transcript):
     msgs = {}
     try:
-        for line in open(transcript):
+        for line in op(transcript):
             try:
                 o = json.loads(line)
             except Exception:
@@ -51,7 +60,7 @@ def day_total():
     t = 0.0
     for f in glob.glob(os.path.join(SESS, "*.json")):
         try:
-            d = json.load(open(f))
+            d = json.load(op(f))
             if d.get("date") == today:
                 t += d.get("weighted", 0)
         except Exception:
@@ -75,12 +84,12 @@ if cmd == "record":
     if tp:
         w, usd = tally(tp)
         json.dump({"date": today, "weighted": w, "usd": usd},
-                  open(os.path.join(SESS, f"{sid}.json"), "w"))
+                  op(os.path.join(SESS, f"{sid}.json"), "w"))
 elif cmd == "check":
     b = load("budget.json", {"daily_limit": 40e6, "session_limit": 20e6, "warn_pct": 80})
     day = day_total()
     try:
-        sess = json.load(open(os.path.join(SESS, f"{sid}.json"))).get("weighted", 0)
+        sess = json.load(op(os.path.join(SESS, f"{sid}.json"))).get("weighted", 0)
     except Exception:
         sess = 0
     for label, used, lim in (("daily", day, b["daily_limit"]), ("session", sess, b["session_limit"])):
@@ -97,7 +106,7 @@ elif cmd == "report":
     by = {}
     for f in glob.glob(os.path.join(SESS, "*.json")):
         try:
-            d = json.load(open(f))
+            d = json.load(op(f))
             by.setdefault(d["date"], [0, 0.0, 0])
             by[d["date"]][0] += d["weighted"]; by[d["date"]][1] += d.get("usd", 0); by[d["date"]][2] += 1
         except Exception:
