@@ -23,3 +23,11 @@ Check: `python3 "$HOME\.claude\hooks\usage.py" report`
 - Budget: `~/.claude/usage/budget.json` (weighted tokens; defaults are placeholders)
 - USD: fill `~/.claude/usage/pricing.json` as `{"<model substring>": {"in": $/MTok, "out": $/MTok}}`
 - Report: `python3 ~/.claude/hooks/usage.py report`
+
+## Automatic behavior (no maintenance)
+- **Self-update:** a SessionStart hook (`hooks/autoupdate.py`) runs `git pull` on the kit at most once per 24h and re-runs
+  `install.py` if anything changed. Silent, never blocks. Disable: set env `CLAUDE_COST_KIT_NO_UPDATE=1`.
+- **Self-tuning budget:** with `"auto": true` in `~/.claude/usage/budget.json`, after 5 days of history the daily limit becomes
+  `max(5M, 2 x p90 of past daily totals)` and the session limit half of that. Set `"auto": false` to keep manual limits.
+- **Cloud:** the environment setup script installs the kit in every fresh container.
+Note: auto-update executes whatever is on this repo's `main` branch, so protect the GitHub account (2FA).
