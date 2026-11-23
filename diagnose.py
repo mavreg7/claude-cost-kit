@@ -18,8 +18,23 @@ print(f"CLAUDE_CONFIG_DIR={'<unset>' if not cfg_env else cfg_env}  -> Claude rea
 if cfg_env and os.path.abspath(cfg_env) != os.path.abspath(os.path.join(home, '.claude')):
     print(f"WARN  CLAUDE_CONFIG_DIR differs from ~/.claude: the kit was installed to ~/.claude but Claude reads {cfg_env}")
 
-for t in ("python3", "python", "git", "bash", "claude"):
+def find_bash():
+    b = shutil.which("bash")
+    if b:
+        return b
+    g = shutil.which("git")  # Git for Windows: <root>\\cmd\\git.exe, bash lives in <root>\\bin (not on PATH by default; Claude finds it itself)
+    if g:
+        root = os.path.dirname(os.path.dirname(g))
+        for rel in ("bin/bash.exe", "usr/bin/bash.exe"):
+            p = os.path.join(root, rel)
+            if os.path.exists(p):
+                return p
+    return None
+
+for t in ("python3", "python", "git", "claude"):
     print(f"{ok(shutil.which(t))} on PATH: {t} -> {shutil.which(t)}")
+BASH = find_bash()
+print(f"{ok(BASH)} bash (Git Bash is enough, PATH not required): {BASH}")
 
 print("--- files in", dest)
 for rel in ("settings.json", "CLAUDE.md", "hooks/trim.py", "hooks/trim_bash.py", "hooks/usage.py", "hooks/autoupdate.py",
@@ -53,7 +68,7 @@ for p in cands:
             print(f"      WARN {k}={s[k]}")
 
 print("--- dry run of the hook commands (as the shell would run them)")
-sh = shutil.which("bash")
+sh = BASH
 for name, stdin in (("usage.py", '{"session_id":"diag"}'), ("trim_bash.py", '{"tool_input":{"command":"ls"}}')):
     arg = ["check"] if name == "usage.py" else []
     try:
